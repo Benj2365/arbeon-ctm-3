@@ -1,0 +1,39 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '**.zip'
+      - '.github/workflows/main.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v4
+
+      - name: Installer Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Trouver le projet Android
+        run: |
+          unzip -o "$(find . -maxdepth 1 -iname '*.zip' -print -quit)" -d projet
+          find projet -name settings.gradle -o -name settings.gradle.kts
+          test -n "$(find projet -name settings.gradle -o -name settings.gradle.kts)"
+
+      - name: Compiler APK
+        run: |
+          cd "$(dirname "$(find projet -name settings.gradle -o -name settings.gradle.kts | head -1)")"
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Récupérer l'APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: arbeon-ctm-apk
+          path: projet/**/build/outputs/apk/debug/*.apk
